@@ -17,7 +17,31 @@ trait Stream[+A] {
     case Empty => None
     case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
   }
-  def take(n: Int): Stream[A] = ???
+
+  def toList: List[A] = this match {
+    case Empty => List()
+    case Cons(h, t) => h() :: t().toList
+  }
+
+  def toList2: List[A] = {
+    def go(str: Stream[A], acc: List[A]): List[A] = str match {
+      case Cons(h, t) => go(t(), h() :: acc)
+      case Empty => acc
+    }
+    go(this, List()).reverse
+  }
+
+  // Currently works in reverse. When reverse or foldLeft are implemented, will make it work.
+  def take(n: Int): Stream[A] = {
+    def go(n: Int, s: Stream[A], acc: Stream[A]):  Stream[A] = n match {
+      case 0 => acc
+      case _ => s match {
+        case Empty => acc
+        case Cons(h, t) => go(n - 1, t(), Cons(h, () => acc))
+      }
+    }
+    go(n, this, empty)
+  }
 
   def drop(n: Int): Stream[A] = ???
 
@@ -36,6 +60,10 @@ case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
 
 object Stream {
+
+  def main(args: Array[String]): Unit = {
+    print(cons(1, cons(2, cons(3, empty))).take(2).toList2)
+  }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
     lazy val tail = tl

@@ -131,8 +131,8 @@ object List { // `List` companion object. Contains functions for creating and wo
     case (Cons(x, tail1), Cons(y, tail2)) => Cons(f(x, y), zipWith(tail1, tail2)(f))
   }
 
-  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = {
-    val len = length(sub)
-
-  }
+//  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = {
+//    val len = length(sub)
+//
+//  }
 }
