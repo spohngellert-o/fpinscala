@@ -75,7 +75,7 @@ case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
 object Stream {
 
   def main(args: Array[String]): Unit = {
-    print(unfold(0)(x => Some((x, x + 1))).take(3).toList2)
+    print(fibs.take(20).toList2)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
@@ -89,21 +89,11 @@ object Stream {
     if (as.isEmpty) empty 
     else cons(as.head, apply(as.tail: _*))
 
-  val ones: Stream[Int] = Stream.cons(1, ones)
-  def constant[A](a: A): Stream[A] = {
-    lazy val tail: Stream[A] = Cons(() => a, () => tail)
-    tail
-  }
-  def from(n: Int): Stream[Int] = {
-    cons(n, from(n + 1))
-  }
+  val ones: Stream[Int] = unfold(empty)((s) => Some((1, s)))
+  def constant[A](a: A): Stream[A] = unfold(empty)((s) => Some((a, s)))
+  def from(n: Int): Stream[Int] = unfold(n)((s) => Some(s, s + 1))
 
-  val fibs: Stream[Int] = {
-    def go(i: Int, j: Int): Stream[Int] = {
-      cons(j, go(i + j, i))
-    }
-    go(1, 0)
-  }
+  val fibs: Stream[Int] = unfold((1, 0))((s) => Some(s._2, (s._1 + s._2, s._1)))
 
   def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = f(z) match {
     case Some((a, s)) => cons(a, unfold(s)(f))
