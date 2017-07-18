@@ -31,16 +31,13 @@ trait Stream[+A] {
     go(this, List()).reverse
   }
 
-  // Currently works in reverse. When reverse or foldLeft are implemented, will make it work.
   def take(n: Int): Stream[A] = {
-    def go(n: Int, s: Stream[A], acc: Stream[A]):  Stream[A] = n match {
-      case 0 => acc
-      case _ => s match {
-        case Empty => acc
-        case Cons(h, t) => go(n - 1, t(), Cons(h, () => acc))
-      }
+    unfold((this, n)){
+      case (_, 0) => None
+      case (Empty, n) => None
+      case (Cons(h, t), n) => Some(h(), (t(), n - 1))
+      case _ => None
     }
-    go(n, this, empty)
   }
 
 //  def takeWhile(p: A => Boolean): Stream[A] = this match {
@@ -68,6 +65,27 @@ trait Stream[+A] {
   def filter(f: A => Boolean): Stream[A] = this.foldRight(empty[A])((a, b) => if (f(a)) cons(a, b) else b)
 
   def startsWith[B](s: Stream[B]): Boolean = ???
+
+  def mapViaUnfold[B](f: A => B): Stream[B] = unfold(this)((s) => s match {
+    case Cons(h, t) => Some((f(h()), t()))
+    case _ => None
+  })
+
+  def takeWhileViaUnfold(p: A => Boolean): Stream[A] = unfold(this){
+    case Cons(h, t) => if (p(h())) Some((h(), t())) else None
+    case _ => None
+  }
+
+  def zipWith[B, C](s2: Stream[B])(f: (A,B) => C): Stream[C] = unfold((this, s2)){
+    case (Cons(x, tail1), Cons(y, tail2)) => Some(f(x(), y()), (tail1(), tail2()))
+    case _ => None
+  }
+  def zipAll[B](s2: Stream[B]): Stream[(Option[A],Option[B])] = unfold((this, s2)){
+    case (Cons(h1, t1), Cons(h2, t2)) => Some(((Some(h1()), Some(h2())), (t1(), t2())))
+    case (Cons(h1, t1), Empty) => Some(((Some(h1()), None), (t1(), Empty)))
+    case (Empty, Cons(h2, t2)) => Some(((None, Some(h2())), (Empty, t2())))
+    case _ => None
+  }
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
@@ -75,7 +93,7 @@ case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
 object Stream {
 
   def main(args: Array[String]): Unit = {
-    print(fibs.take(20).toList2)
+    print(cons(1, cons(2, cons(3, empty))).zipAll(cons(2, cons(1, empty))).toList2)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
