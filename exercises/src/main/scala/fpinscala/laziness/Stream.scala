@@ -45,7 +45,13 @@ trait Stream[+A] {
 //    case Cons(h, t) => if (p(h())) cons(h(), t().takeWhile(p)) else empty
 //  }
 
-  def drop(n: Int): Stream[A] = ???
+  def drop(n: Int): Stream[A] = n match {
+    case 0 => this
+    case _ => this match {
+      case Cons(h, t) => t() drop n-1
+      case _ => empty
+    }
+  }
 
   def takeWhile(p: A => Boolean): Stream[A] = this.foldRight(empty[A])((a, b) => if (p(a)) cons(a, b) else empty)
   def forAll(p: A => Boolean): Boolean = this.foldRight(true)((a, b) => p(a) && b)
@@ -64,7 +70,7 @@ trait Stream[+A] {
 
   def filter(f: A => Boolean): Stream[A] = this.foldRight(empty[A])((a, b) => if (f(a)) cons(a, b) else b)
 
-  def startsWith[B](s: Stream[B]): Boolean = ???
+//  def startsWith[B](s: Stream[B]): Boolean = ???
 
   def mapViaUnfold[B](f: A => B): Stream[B] = unfold(this)((s) => s match {
     case Cons(h, t) => Some((f(h()), t()))
@@ -86,6 +92,22 @@ trait Stream[+A] {
     case (Empty, Cons(h2, t2)) => Some(((None, Some(h2())), (Empty, t2())))
     case _ => None
   }
+  def startsWith[A](s2: Stream[A]): Boolean = {
+    this.zipWith(s2)((_, _)).foldRight(true)((a, b) => a._1 == a._2 && b)
+  }
+  def tails: Stream[Stream[A]] =
+    unfold(this) {
+      case Empty => None
+      case s => Some((s, s drop 1))
+    } append Stream(empty)
+
+  def hasSubsequence[A](s: Stream[A]): Boolean =
+    tails exists (_ startsWith s)
+
+  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] = this.foldRight(z, Stream(z))((a, b) => {
+    lazy val result = f(a, b._1)
+    (result, cons(result, b._2))
+  })._2
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
@@ -93,7 +115,7 @@ case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
 object Stream {
 
   def main(args: Array[String]): Unit = {
-    print(cons(1, cons(2, cons(3, empty))).zipAll(cons(2, cons(1, empty))).toList2)
+    print(Stream(1,2,3).scanRight(0)(_ + _).toList2)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
